@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:context="http://www.springframework.org/schema/context" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    
+    <!-- Environment Properties Placeholder -->
+	<http:listener-config name="api-httpListenerConfig" host="${api.https.host}" port="${api.https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
+        <tls:context>
+            <tls:trust-store insecure="true"/>
+        </tls:context>
+    </http:listener-config>
+    <!-- API Autodiscovery Configuration -->
+    <api-platform-gw:api apiName="${api.name}" version="${api.version}" flowRef="api-main" create="true" doc:name="API Autodiscovery"/>
+    <!-- Used for Logs / Audit -->
+    <spring:beans>
+		<spring:bean id="objectMapper" class="org.codehaus.jackson.map.ObjectMapper" scope="singleton" name="Bean"/>
+	</spring:beans>
+    <context:property-placeholder location="config/${mule_env}.properties"/>
+	
+	<configuration doc:name="Configuration">
+        <expression-language autoResolveVariables="true">              
+            <global-functions>
+            	def auditControl() { return app.registry.objectMapper.writeValueAsString(dw(org.mule.util.IOUtils.getResourceAsString("dw-config/audit-control.dwl",null))); }
+            	def outboundHeaderControl() { return app.registry.objectMapper.writeValueAsString(dw(org.mule.util.IOUtils.getResourceAsString("dw-config/apikit-outbound-header.dwl",null))); }
+            </global-functions> 
+        </expression-language>
+    </configuration>
+    <sub-flow name="start-audit">
+     <set-variable variableName="auditLogLocation" value="#['StartAudit']" doc:name="Set Audit Start Location" />
+     <logger message="#[auditControl()]  " level="INFO" doc:name="Audit: Start Flow"/>
+    </sub-flow>
+    
+    <sub-flow name="intermediate-audit">
+     <set-variable variableName="auditLogLocation" value="#['IntermediateAudit']" doc:name="Set Audit Start Location" />
+     <logger message="#[auditControl()]  " level="INFO" doc:name="Audit: Intermediate Flow"/>
+    </sub-flow>
+       
+    <sub-flow name="end-audit">
+    <set-variable variableName="auditLogLocation" value="#['EndAudit']" doc:name="Set Audit End Location"/>
+        <logger message="#[auditControl()]" level="INFO" doc:name="Audit: End Flow"/>
+    </sub-flow>
+    <sub-flow name="error-audit">
+      <set-variable variableName="auditLogLocation" value="ErrorAudit" doc:name="Set Audit Log Location"/>
+      <logger message="#[auditControl()]" level="INFO" doc:name="Error Audit"/>
+     
+    </sub-flow>
+    
+    <sub-flow name="audit-header">
+    <set-property propertyName="x-header" value="#[outboundHeaderControl()]" doc:name="Set BP response header" mimeType="application/json"/>
+    </sub-flow>
+    <sub-flow name="set-transaction">
+    <set-variable variableName="auditHeader" value="#[message.inboundProperties.'x-header']]" doc:name="Set Audit Header" mimeType="application/json"/>
+        <flow-ref name="get-correlation" doc:name="get-correlation"/>
+        <set-variable variableName="transactionId" value="#[message.id]" doc:name="Set Tracking ID"/>
+    </sub-flow>
+    <sub-flow name="get-correlation">
+    <choice doc:name="Check Correlation ID">
+            <when expression="#[message.inboundProperties.CORRELATION_ID != null]">
+                <set-variable variableName="MULE_CORRELATION_ID" value="#[message.inboundProperties.CORRELATION_ID]" doc:name="Set Correlation ID"/>
+            </when>
+            <otherwise>
+                <set-variable variableName="MULE_CORRELATION_ID" value="#[function:uuid]" doc:name="Generate Correlation ID"/>
+            </otherwise>
+        </choice>
+    </sub-flow>
+    
+</mule>

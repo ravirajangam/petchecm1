@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+    <!-- HTTP Listener Connector -->
+    
+
+	
+    <!-- APIkit Router Configuration -->
+    <apikit:config name="api-config" raml="TO-BE-DELETED.raml" consoleEnabled="false" doc:name="Router" disableValidations="true" keepRamlBaseUri="false"/>
+    
+    
+    <flow name="api-main" >
+        <http:listener config-ref="api-httpListenerConfig" path="/api/*" doc:name="HTTP" />
+        <flow-ref name="set-transaction" doc:name="set-transaction"/>
+        <apikit:router config-ref="api-config" doc:name="APIkit Router" />
+        <exception-strategy ref="global-exception-strategy" doc:name="Reference Exception Strategy" />
+    </flow>
+    <flow name="api-console">
+        <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="get:/checkup:api-config">
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-variable variableName="checkpoint" value="checkpoint1" doc:name="optional checkpoint1"/>
+        <flow-ref name="intermediate-audit" doc:name="intermediate-audit"/>
+        <set-variable variableName="checkpoint" value="checkpoint2" doc:name="optional checkpoint2"/>
+        <flow-ref name="intermediate-audit" doc:name="intermediate-audit"/>
+        <set-payload value="{     &quot;title&quot;: &quot;BP Healthcheck API&quot;,     &quot;version&quot;: &quot;v1&quot;,     &quot;serverTime&quot;: &quot;#[server.dateTime]&quot; }" doc:name="Set Payload" mimeType="application/json"/>
+
+         <logger message="#[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger"/>
+
+        
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+        <flow-ref name="end-audit" doc:name="end-audit"/>
+        <exception-strategy ref="global-exception-strategy" doc:name="Reference Exception Strategy"/>
+   
+    </flow>    
+</mule>

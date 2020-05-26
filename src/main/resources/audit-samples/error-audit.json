@@ -1,0 +1,26 @@
+{
+   "AuditControl": {
+      "AuditStageIndicator": {
+         "AuditEventMessage": "MainFlow",
+         "AuditEventName": "ErrorAudit"
+      },
+      "InitiatorDetail": {
+         "System": "Salesforce",
+         "CorrelationID":"40e796ae-0404-4cf2-8a77-e795687c42c3"
+      },
+      "MessageControl": {
+         "AuditTrackingID": "40e796ae-0404-4cf2-8a77-e795687c42c3",
+         "CreationDateTime": "2018-08-03T15:47:23.222Z"
+      }
+   },
+   "Identifiers": [
+      {
+         "IdentifierName": "Transaction ID",
+         "IdentifierValue": "1b9365a0-25f5-11e8-bcba-9cb654a2c37a"
+      }
+   ],
+   "StatusLog": {
+      "ErrorDetails": "/ping1 (org.mule.module.apikit.exception.NotFoundException).",
+      "OutcomeCode": "Failure"
+   }
+}

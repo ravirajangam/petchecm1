@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd">
+    <munit:config name="munit" doc:name="MUnit configuration"/>
+    <context:property-placeholder location="test.properties"/>
+    <http:request-config name="request-http-listener" protocol="HTTPS" host="mocksvc.mulesoft.com" port="443"  doc:name="HTTP Request Configuration"/>
+    
+    <munit:test name="api-test-suite-get:/checkup:api-configTest" description="Test" ignore="true">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <http:request config-ref="request-http-listener" path="${mockurl}" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="Client_Id" value="test"/>
+                <http:header headerName="Client_Secret" value="test"/>
+            </http:request-builder>
+        </http:request>
+        <object-to-string-transformer encoding="UTF-8" mimeType="application/json" doc:name="Object to String"/>
+        <munit:assert-on-equals message="Response code is not 200." expectedValue="#[message.inboundProperties['http.status']]" actualValue="#[Integer.parseInt('200')]" doc:name="Assert Status Code"/>
+    </munit:test>
+</mule>

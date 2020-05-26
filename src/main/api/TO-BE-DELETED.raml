@@ -1,0 +1,38 @@
+#%RAML 1.0
+title: Template API
+version: v1
+
+
+baseUri: http://region-api.bpglobal.com/segment/context-type-env/version
+  
+
+protocols: [HTTP,HTTPS]
+
+
+      
+/checkup:
+  get:
+    description: An endpoint that can be used for API readiness check.
+    headers: 
+      Accept:
+        type: string
+        required: false
+        default: application/json
+      x-header:
+         
+         required: false
+         example: |
+            auditTrackingID: 40e796ae-0404-4cf2-8a77-e795687c42c3
+            creationDateTime: 2018-08-03T15:47:23.222Z
+            messageInitiator: Salesforce
+            correlationID: 40e796ae-0404-4cf2-8a77-e795687c42c3
+    responses:
+      200:  
+        body:
+          application/json:           
+            example: |
+              {
+                "title": "BP Readiness Check API",
+                "version": "v1",
+                "serverTime": "2018-03-12T10:00:00.000Z"
+              }

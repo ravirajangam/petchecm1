@@ -1,0 +1,8 @@
+config:
+  anypoint.platform.client_id: 0bfc063d-a02c-40b6-818d-45cdf4b2b74f
+  anypoint.platform.client_secret: 0bfc063d-a02c-40b6-818d-45cdf4b2b74f
+  appName: Petchem-Customer-sAPI
+  businessGroup: BP Group\\Training
+  environment: Production
+  mule_env: prod
+deploymentType: cloudhub

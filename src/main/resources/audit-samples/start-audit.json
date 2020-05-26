@@ -1,0 +1,22 @@
+{
+   "AuditControl": {
+      "AuditStageIndicator": {
+         "AuditEventMessage": "MainFlow",
+         "AuditEventName": "StartAudit"
+      },
+      "InitiatorDetail": {
+         "System": "MULE",
+         "CorrelationID":"8f2eb150-25f4-11e8-bcba-9cb654a2c37a"
+      },
+      "MessageControl": {
+         "AuditTrackingID": "8f2eb150-25f4-11e8-bcba-9cb654a2c37a",
+         "CreationDateTime": "2018-03-12T12:54:53.948Z"
+      }
+   },
+   "Identifiers": [
+      {
+         "IdentifierName": "Transaction ID",
+         "IdentifierValue": "8f2eb150-25f4-11e8-bcba-9cb654a2c37a"
+      }
+   ]
+}

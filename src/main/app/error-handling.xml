@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    
+    <spring:beans>
+        <spring:bean id="statuses" class="java.util.HashMap">
+            <spring:constructor-arg>
+                <spring:map key-type="java.lang.String" value-type="java.lang.String">
+                    <spring:entry key="400" value="BAD_REQUEST" />
+                    <spring:entry key="401" value="UNAUTHORIZED" />
+                    <spring:entry key="403" value="FORBIDDEN" />
+                    <spring:entry key="404" value="RESOURCE_NOT_FOUND" />
+                    <spring:entry key="405" value="METHOD_NOT_ALLOWED" />
+                    <spring:entry key="406" value="NOT_ACCEPTABLE" />
+                    <spring:entry key="409" value="CONFLICT" />
+                    <spring:entry key="415" value="UNSUPPORTED_MEDIA_TYPE" />
+                    <spring:entry key="500" value="INTERNAL_SERVER_ERROR" />
+                    <spring:entry key="502" value="BAD_GATEWAY" />
+                </spring:map>
+            </spring:constructor-arg>
+        </spring:bean>
+    </spring:beans>
+    
+    <choice-exception-strategy name="global-exception-strategy">    
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.http.internal.request.ResponseValidatorException)]" doc:name="Caused By (org.mule.module.http.internal.request.ResponseValidatorException)">
+            <choice doc:name="Choice">
+                <when expression="#[message.inboundProperties['http.status'] == 401]">
+                    <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+                    <json:object-to-json-transformer doc:name="Object to JSON"/>
+                    <set-variable variableName="errorMessage" value="#[payload]" doc:name="Set Error Message" encoding="UTF-8" mimeType="application/json"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>
+                </when>
+                <when expression="#[message.inboundProperties['http.status'] == 403]">
+                    <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+                    <json:object-to-json-transformer doc:name="Object to JSON"/>
+                    <set-variable variableName="errorMessage" value="#[payload]" doc:name="Set Error Message" encoding="UTF-8" mimeType="application/json"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>
+                </when>
+                <when expression="#[message.inboundProperties['http.status'] &lt; 500]">
+                    <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+                    <json:object-to-json-transformer doc:name="Object to JSON"/>
+                    <set-variable variableName="errorMessage" value="#[payload]" doc:name="Set Error Message" encoding="UTF-8" mimeType="application/json"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>                    
+                </when>
+                <otherwise>
+                    <set-variable variableName="errorMessage" value="Service internal error." doc:name="Set Error Message"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>                
+                </otherwise>
+            </choice>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.extension.validation.api.ValidationException)]" doc:name="Caused By (org.mule.extension.validation.api.ValidationException)">
+            <choice doc:name="Choice">
+                <when expression="#[message.inboundProperties['http.status'] == 401]">
+                    <set-variable variableName="errorMessage" value="Upstream service did not authorize the request. #[exception.cause.message]" doc:name="Set Error Message"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>
+                </when>
+                <when expression="#[message.inboundProperties['http.status'] == 403]">
+                    <set-variable variableName="errorMessage" value="Access to the upstream service is forbidden. #[exception.cause.message]" doc:name="Set Error Message"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>
+                </when>
+                <when expression="#[message.inboundProperties['http.status'] &lt; 500]">
+                    <set-variable variableName="errorMessage" value="Upstream service unable to fulfil request. #[exception.cause.message]" doc:name="Set Error Message"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>                    
+                </when>
+                <otherwise>
+                    <set-variable variableName="errorMessage" value="Upstream service internal error." doc:name="Set Error Message"/>
+                    <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+                    <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>                
+                </otherwise>
+            </choice>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(java.util.concurrent.TimeoutException)]" doc:name="Caused By (java.util.concurrent.TimeoutException)">
+            <set-variable variableName="errorMessage" value="#[exception.cause.message]" doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>            
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(java.util.NoSuchElementException)]" doc:name="Caused By (java.util.NoSuchElementException)">
+            <set-variable variableName="errorMessage" value="Unable to connect to upstream service." doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>            
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causeMatches('java.net')]" doc:name="Cause Matches ('java.net')">
+            <set-variable variableName="errorMessage" value="#[exception.cause.message]" doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Retry again later." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-bad-gateway-response-sub-flow" doc:name="global-bad-gateway-response-sub-flow"/>            
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.apikit.exception.NotFoundException)]" doc:name="Caused By (org.mule.module.apikit.exception.NotFoundException)">
+            <set-variable variableName="errorMessage" value="The server has not found anything matching the request URI." doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Check your request or retry later." doc:name="Set Suggested Action"/>            
+            <flow-ref name="global-resource-not-found-response-sub-flow" doc:name="global-resource-not-found-response-sub-flow"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.apikit.exception.MethodNotAllowedException)]" doc:name="Caused By (org.mule.module.apikit.exception.MethodNotAllowedException)">
+            <set-variable variableName="errorMessage" value="The server has not implemented the requested HTTP method." doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Check your request." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-method-not-allowed-response-sub-flow" doc:name="global-method-not-allowed-response-sub-flow"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.apikit.exception.UnsupportedMediaTypeException)]" doc:name="Caused By (org.mule.module.apikit.exception.UnsupportedMediaTypeException)">
+            <set-variable variableName="errorMessage" value="Media type is not supported" doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Check your request." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-unsupported-media-type-response-sub-flow" doc:name="global-unsupported-media-type-response-sub-flow"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.apikit.exception.NotAcceptableException)]" doc:name="Caused By (org.mule.module.apikit.exception.NotAcceptableException)">
+            <set-variable variableName="errorMessage" value="Cannot accept request type." doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Check your request." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-not-acceptable-response-sub-flow" doc:name="global-not-acceptable-response-sub-flow"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.module.apikit.exception.BadRequestException)]" doc:name="Caused By (org.mule.module.apikit.exception.BadRequestException)">
+            <set-variable variableName="errorMessage" value="#[exception.cause.message]" doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Check your request." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-bad-request-response-sub-flow" doc:name="global-bad-request-response-sub-flow"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="#[exception.causedBy(java.lang.RuntimeException)]" doc:name="Caused by (java.lang.RuntimeException)">
+            <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+            <flow-ref name="start-audit" doc:name="start-audit"/>
+            <expression-component doc:name="Set Error Info"><![CDATA[if (flowVars.httpStatus == null || flowVars.httpStatus == '') {
+	message.outboundProperties['http.status'] = "500";
+} else {
+	message.outboundProperties['http.status'] = flowVars.httpStatus;
+}
+
+if (flowVars.errorMessage == null || flowVars.errorMessage == '') {
+	flowVars.errorMessage = "Unable to fullfil request due to internal error Internal error. The status of the transaction is unknown.";
+}
+
+if (flowVars.errorField == null || flowVars.errorField == '') {
+	flowVars.errorField = null;
+}
+
+if (flowVars.errorDescription == null || flowVars.errorDescription == '') {
+	flowVars.errorDescription = null;
+}
+
+if (flowVars.suggestedAction == null || flowVars.suggestedAction == '') {
+	flowVars.suggestedAction = "Contact Customer Service at bpsupport@bp.com and provide transaction-Id for diagnosis along with other details.";
+}
+
+if (flowVars.errorCode == null || flowVars.errorCode == '') {
+	payload = app.registry.statuses.get(message.outboundProperties['http.status']);
+} else {
+	payload = flowVars.errorCode;
+}
+
+return payload;
+]]></expression-component>
+            <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+            <flow-ref name="error-audit" doc:name="error-audit"/>
+            <flow-ref name="audit-header" doc:name="audit-header"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="Default">
+            <set-variable variableName="errorMessage" value="Unable to fullfil request due to internal error. The status of the transaction is unknown." doc:name="Set Error Message"/>
+            <set-variable variableName="suggestedAction" value="Contact Customer Service at bpsupport@bp.com and provide transaction-Id for diagnosis along with other details." doc:name="Set Suggested Action"/>
+            <flow-ref name="global-internal-server-error-response-sub-flow" doc:name="global-internal-server-error-response-sub-flow"/>
+        </catch-exception-strategy>
+    </choice-exception-strategy>
+    
+    <sub-flow name="global-bad-request-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="400" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-resource-not-found-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="404" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-method-not-allowed-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="405" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-not-acceptable-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="406" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-conflict-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="409" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-unsupported-media-type-response-sub-flow">
+    <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="415" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-internal-server-error-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="500" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" doc:name="Set Error Code" mimeType="application/java"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    <sub-flow name="global-bad-gateway-response-sub-flow">
+        <set-variable variableName="exceptionDetails" value="#[exception.getMessage()]" doc:name="Set Exception Details"/>
+        <flow-ref name="start-audit" doc:name="start-audit"/>
+        <set-property propertyName="http.status" value="#[message.inboundProperties['http.status']]" doc:name="Set Status"/>
+        <set-payload value="#[app.registry.statuses.get(message.outboundProperties['http.status'])]" mimeType="application/java" doc:name="Set Error Code"/>
+        <flow-ref name="global-prepare-error-response-sub-flow" doc:name="global-prepare-error-response-sub-flow"/>
+        <flow-ref name="error-audit" doc:name="error-audit"/>
+        <flow-ref name="audit-header" doc:name="audit-header"/>
+    </sub-flow>
+    
+    <sub-flow name="global-prepare-error-response-sub-flow">
+        <dw:transform-message doc:name="Create Error Message">
+            <dw:set-payload resource="classpath:dw-config/error-message.dwl"/>
+        </dw:transform-message>
+    </sub-flow>
+    
+</mule>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+    <Appenders>
+        <RollingFile name="file" fileName="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}${project.artifactId}.log" 
+                 filePattern="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}${project.artifactId}-%i.log">
+            <PatternLayout pattern="%d [%t] %-5p %c - %m%n" />
+            <SizeBasedTriggeringPolicy size="10 MB" />
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <!-- Http Logger shows wire traffic on DEBUG -->
+		<AsyncLogger name="org.glassfish.grizzly" level="WARN"/>
+		<AsyncLogger name="com.ning.http" level="INFO"/>
+		<AsyncLogger name="org.asynchttpclient" level="INFO" />
+		<AsyncLogger name="org.mule.module.http.internal.HttpMessageLogger" level="WARN"/>
+	
+		<!-- JDBC Logger shows queries and parameters values on DEBUG -->
+		<AsyncLogger name="com.mulesoft.mule.transport.jdbc" level="WARN"/>
+    
+        <!-- CXF is used heavily by Mule for web services -->
+        <AsyncLogger name="org.apache.cxf" level="WARN"/>
+
+        <!-- Apache Commons tend to make a lot of noise which can clutter the log-->
+        <AsyncLogger name="org.apache" level="WARN"/>
+
+        <!-- Reduce startup noise -->
+        <AsyncLogger name="org.springframework.beans.factory" level="WARN"/>
+
+        <!-- Mule classes -->
+        <AsyncLogger name="org.mule" level="INFO"/>
+        <AsyncLogger name="com.mulesoft" level="INFO"/>
+        <AsyncLogger name="org.mule.DefaultMuleMessage" level="ERROR" />
+		<AsyncLogger name="org.mule.module.launcher" level="INFO" />
+        
+
+        <!-- Reduce DM verbosity -->
+        <AsyncLogger name="org.jetel" level="WARN"/>
+        <AsyncLogger name="Tracking" level="WARN"/>
+        
+	    <!-- Spring Property Placeholder -->
+		<AsyncLogger
+		  name="org.springframework.context.support.PropertySourcesPlaceholderConfigurer"
+		  level="INFO" />
+		<AsyncLogger name="org.mule.modules.security.placeholder"
+		  level="INFO" />
+	
+		<!-- APIKit -->
+		<AsyncLogger name="org.mule.module.apikit" level="INFO" />
+	
+		<!-- Batch Module -->
+		<AsyncLogger name="com.mulesoft.module.batch" level="INFO" />
+	
+		<!-- Quartz Scheduler -->
+		<AsyncLogger name="org.quartz.core.QuartzScheduler" level="INFO" />
+	
+		<!-- SFDC -->
+		<AsyncLogger name="org.mule.modules.salesforce" level="INFO"/>
+		<AsyncLogger name="com.sforce" level="INFO"/>
+	
+	
+		<!-- others -->
+		<AsyncLogger name="org.mortbay.jetty" level="INFO"/>
+		<AsyncLogger name="com.gigaspaces" level="WARN"/>
+		<AsyncLogger name="com.j_spaces" level="WARN"/>
+		<AsyncLogger name="com.opensys.cloveretl" level="WARN"/>
+		<AsyncLogger name="com.sun.jini" level="WARN"/>
+		<AsyncLogger name="net.jini" level="WARN"/>
+		<AsyncLogger name="com.mchange" level="WARN"/>
+        
+        <AsyncRoot level="INFO">
+            <AppenderRef ref="file" />
+        </AsyncRoot>
+    </Loggers>
+</Configuration>
